@@ -14,14 +14,22 @@
 
       <!-- Player video -->
       <div v-if="videoUrl" class="relative" :class="{ 'fullscreen-video-container': isFullScreen }">
-        <video ref="videoPlayer" controls playsinlin webkit-playsinlinee class="w-full h-full">
+        <video ref="videoPlayer" controls playsinline webkit-playsinline class="w-full h-full">
           <source :src="videoUrl" type="video/mp4" />
         </video>
 
-        <!-- Pulsanti di controllo -->
-        <div class="absolute inset-0 flex justify-between items-center px-4 pointer-events-none">
+        <!-- Pulsante nascondi/mostra controlli -->
+        <div class="absolute top-4 right-4 pointer-events-auto">
+          <button @click="toggleControls" :class="{ 'opacity-50': controlsOpacity }" class="bg-gray-700 text-white px-3 py-2 rounded-md text-sm shadow-md hover:bg-gray-600 
+                         transition-opacity duration-300">
+            {{ showControls ? '👁 Nascondi' : '👁 Mostra' }}
+          </button>
+        </div>
+
+        <!-- Pulsanti di controllo (condizionali) -->
+        <div v-if="showControls" class="absolute inset-0 flex justify-between items-center px-4 pointer-events-none">
           <!-- Sinistra: Start Loop & Riduci Velocità -->
-          <div class="flex flex-col gap-2 pointer-events-auto">
+          <div class="flex flex-col gap-8 pointer-events-auto">
             <button @click="setLoopStart">
               ⏮ Start Loop
             </button>
@@ -31,7 +39,7 @@
           </div>
 
           <!-- Destra: End Loop & Aumenta Velocità -->
-          <div class="flex flex-col gap-2 pointer-events-auto">
+          <div class="flex flex-col gap-8 pointer-events-auto">
             <button @click="setLoopEnd">
               ⏭ End Loop
             </button>
@@ -50,7 +58,7 @@
         </div>
 
         <!-- Pulsante full screen -->
-        <div class="absolute bottom-16 left-4 pointer-events-auto">
+        <div v-if="showControls" class="absolute bottom-16 left-4 pointer-events-auto">
           <button @click="toggleFullScreen" class="bg-green-600 text-white px-3 py-2 rounded-md text-sm shadow-md hover:bg-green-700 
                          transition-opacity opacity-80 hover:opacity-100">
             🖥 Full Screen
@@ -81,19 +89,43 @@ export default {
       gestureTimeout: null,
       hammertime: null,
       playbackRate: 1,
-      isFullScreen: false
+      isFullScreen: false,
+      showControls: true,
+      controlsOpacity: false,
+      inactivityTimer: null
     };
   },
   mounted() {
     window.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    this.startInactivityTimer();
+    document.addEventListener('mousemove', this.resetInactivityTimer);
+    document.addEventListener('touchstart', this.resetInactivityTimer);
   },
   beforeUnmount() {
     window.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+    document.removeEventListener('mousemove', this.resetInactivityTimer);
+    document.removeEventListener('touchstart', this.resetInactivityTimer);
     if (this.hammertime) {
       this.hammertime.destroy();
     }
+    clearTimeout(this.inactivityTimer);
   },
   methods: {
+    toggleControls() {
+      this.showControls = !this.showControls;
+      this.resetInactivityTimer(); // Resetta il timer quando l'utente interagisce
+    },
+    startInactivityTimer() {
+      this.inactivityTimer = setTimeout(() => {
+        this.controlsOpacity = true; // Opacizza il pulsante dopo 3 secondi
+      }, 3000); // 3 secondi di inattività
+    },
+    resetInactivityTimer() {
+      clearTimeout(this.inactivityTimer); // Resetta il timer
+      this.controlsOpacity = false; // Ripristina l'opacità
+      this.startInactivityTimer(); // Riavvia il timer
+    },
+
     triggerFileInput() {
       this.$refs.fileInput.click();
     },
