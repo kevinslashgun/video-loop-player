@@ -14,7 +14,7 @@
 
       <!-- Player video -->
       <div v-if="videoUrl" class="relative" :class="{ 'fullscreen-video-container': isFullScreen }">
-        <video ref="videoPlayer" controls class="w-full h-full">
+        <video ref="videoPlayer" controls playsinlin webkit-playsinlinee class="w-full h-full">
           <source :src="videoUrl" type="video/mp4" />
         </video>
 
