@@ -1,6 +1,7 @@
 <template>
   <div class="container mx-auto px-4 max-w-md min-h-screen flex flex-col justify-center">
     <div class="bg-black shadow-lg rounded-lg overflow-hidden">
+
       <!-- Sezione caricamento file -->
       <div class="p-4 bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-lg">
         <input type="file" accept="video/*" @change="handleFileChange" class="hidden" ref="fileInput" />
@@ -12,39 +13,48 @@
       </div>
 
       <!-- Player video -->
-      <div v-if="videoUrl" class="relative">
-        <video ref="videoPlayer" class="" controls @fullscreenchange="handleFullscreenChange">
+      <div v-if="videoUrl" class="relative" :class="{ 'fullscreen-video-container': isFullScreen }">
+        <video ref="videoPlayer" controls class="w-full h-full">
           <source :src="videoUrl" type="video/mp4" />
         </video>
 
-        <!-- Pulsanti di controllo (visibili solo su schermi ≥ 768px) -->
-        <div class="absolute inset-0 hidden md:flex justify-between items-center px-4 pointer-events-none">
+        <!-- Pulsanti di controllo -->
+        <div class="absolute inset-0 flex justify-between items-center px-4 pointer-events-none">
           <!-- Sinistra: Start Loop & Riduci Velocità -->
           <div class="flex flex-col gap-2 pointer-events-auto">
-            <button @click="setLoopStart" class="video-control-btn">
+            <button @click="setLoopStart">
               ⏮ Start Loop
             </button>
-            <button @click="decreasePlaybackSpeed" class="video-control-btn">
+            <button @click="decreasePlaybackSpeed">
               ⏬ Velocità
             </button>
           </div>
 
           <!-- Destra: End Loop & Aumenta Velocità -->
           <div class="flex flex-col gap-2 pointer-events-auto">
-            <button @click="setLoopEnd" class="video-control-btn">
+            <button @click="setLoopEnd">
               ⏭ End Loop
             </button>
-            <button @click="increasePlaybackSpeed" class="video-control-btn">
+            <button @click="increasePlaybackSpeed">
               ⏫ Velocità
             </button>
           </div>
-          <!-- Pulsante disattiva loop (visibile solo su PC) -->
-          <div :class="fullscreen ? 'absolute top-4 right-4' : 'absolute bottom-16 right-4'">
+
+          <!-- Pulsante disattiva loop -->
+          <div class="absolute bottom-16 right-4 pointer-events-auto">
             <button @click="disableLoop" class="bg-red-600 text-white px-3 py-2 rounded-md text-sm shadow-md hover:bg-red-700 
-                           transition-opacity opacity-80 hover:opacity-100 pointer-events-auto">
+                           transition-opacity opacity-80 hover:opacity-100">
               ❌ Loop Off
             </button>
-          </div>  
+          </div>
+        </div>
+
+        <!-- Pulsante full screen -->
+        <div class="absolute bottom-16 left-4 pointer-events-auto">
+          <button @click="toggleFullScreen" class="bg-green-600 text-white px-3 py-2 rounded-md text-sm shadow-md hover:bg-green-700 
+                         transition-opacity opacity-80 hover:opacity-100">
+            🖥 Full Screen
+          </button>
         </div>
 
         <!-- Hint gesture -->
@@ -71,41 +81,19 @@ export default {
       gestureTimeout: null,
       hammertime: null,
       playbackRate: 1,
-      isFullscreen: false
+      isFullScreen: false
     };
   },
   mounted() {
-    window.addEventListener('fullscreenchange', this.setupFullscreenGestures);
+    window.addEventListener('fullscreenchange', this.handleFullscreenChange);
   },
   beforeUnmount() {
-    window.removeEventListener('fullscreenchange', this.setupFullscreenGestures);
+    window.removeEventListener('fullscreenchange', this.handleFullscreenChange);
     if (this.hammertime) {
       this.hammertime.destroy();
     }
   },
   methods: {
-    toggleFullscreen() {
-      this.isFullscreen = !this.isFullscreen;
-
-      const videoContainer = this.$el.querySelector('.container');
-      const video = this.$refs.videoPlayer;
-
-      if (this.isFullscreen) {
-        // Abilitare fullscreen personalizzato
-        videoContainer.style.position = 'fixed';
-        videoContainer.style.top = 0;
-        videoContainer.style.left = 0;
-        videoContainer.style.width = '100%';
-        videoContainer.style.height = '100%';
-        video.style.objectFit = 'cover'; // Copre tutto lo schermo
-      } else {
-        // Disabilitare fullscreen personalizzato
-        videoContainer.style.position = 'relative';
-        videoContainer.style.width = 'auto';
-        videoContainer.style.height = 'auto';
-        video.style.objectFit = 'contain'; // Torna alla dimensione originale
-      }
-    },
     triggerFileInput() {
       this.$refs.fileInput.click();
     },
@@ -117,6 +105,33 @@ export default {
       } else {
         alert('Seleziona un file video valido.');
       }
+    },
+
+    toggleFullScreen() {
+      const videoContainer = this.$refs.videoPlayer.parentElement;
+      if (!this.isFullScreen) {
+        if (videoContainer.requestFullscreen) {
+          videoContainer.requestFullscreen();
+        } else if (videoContainer.mozRequestFullScreen) { // Firefox
+          videoContainer.mozRequestFullScreen();
+        } else if (videoContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
+          videoContainer.webkitRequestFullscreen();
+        } else if (videoContainer.msRequestFullscreen) { // IE/Edge
+          videoContainer.msRequestFullscreen();
+        }
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) { // Firefox
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) { // IE/Edge
+        document.msExitFullscreen();
+      }
+    },
+
+    handleFullscreenChange() {
+      this.isFullScreen = !!document.fullscreenElement;
     },
 
     setupFullscreenGestures() {
@@ -218,15 +233,6 @@ export default {
       }
     },
 
-    handleVideoPause() {
-      // Quando il video viene messo in pausa, disattiva il loop
-      const video = this.$refs.videoPlayer;
-      this.loopMode = false;
-      this.loopStart = null;
-      this.loopEnd = null;
-      video.removeEventListener('timeupdate', this.handleLoop);
-    },
-
     showGestureHint(message) {
       this.gestureHint = message;
 
@@ -260,11 +266,29 @@ export default {
         this.$refs.videoPlayer.addEventListener('timeupdate', this.handleLoop);
         this.showGestureHint('Loop Attivato!');
       }
-    },
-    handleFullscreenChange() {
-      // Verifica se il video è in modalità schermo intero
-      this.fullscreen = document.fullscreenElement !== null;
     }
   }
 };
 </script>
+
+<style scoped>
+.fullscreen-video-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: black;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fullscreen-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Mantiene le proporzioni del video */
+}
+</style>
